@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f4f7f5">
+    <title>Expense Tracker | Daily finances</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+</head>
+
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <a class="brand" href="#top" aria-label="Expense Tracker home">
+                <span class="brand-mark"><i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span>
+                <span>expense<span class="brand-light">tracker</span></span>
+            </a>
+            <div class="topbar-actions">
+                <div class="currency-switch" role="group" aria-label="Currency">
+                    <button class="currency-option is-active" type="button" data-currency="USD" aria-pressed="true">$
+                        USD</button>
+                    <button class="currency-option" type="button" data-currency="INR" aria-pressed="false">₹
+                        INR</button>
+                </div>
+                <button class="icon-button theme-toggle" type="button" aria-label="Switch to dark theme"
+                    title="Switch theme">
+                    <i class="fa-regular fa-moon" aria-hidden="true"></i>
+                </button>
+            </div>
+        </header>
+
+        <main id="top">
+            <section class="intro" aria-labelledby="page-title">
+                <div>
+                    <p class="eyebrow"><span class="status-dot"></span> YOUR MONEY, IN FOCUS</p>
+                    <h1 id="page-title">Daily overview</h1>
+                    <p class="intro-copy">A little clarity goes a long way.</p>
+                </div>
+                <div class="today-label"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span
+                        id="today-date"></span></div>
+            </section>
+
+            <section class="summary-grid" aria-label="Account summary">
+                <article class="summary-card balance-card">
+                    <div class="summary-card-top"><span>Total balance</span><span class="summary-icon balance-icon"><i
+                                class="fa-solid fa-wallet" aria-hidden="true"></i></span></div>
+                    <p class="summary-amount" id="balance-total">$0.00</p>
+                    <p class="summary-note">Your current position</p>
+                </article>
+                <article class="summary-card income-card">
+                    <div class="summary-card-top"><span>Total income</span><span class="summary-icon income-icon"><i
+                                class="fa-solid fa-arrow-down" aria-hidden="true"></i></span></div>
+                    <p class="summary-amount" id="income-total">$0.00</p>
+                    <p class="summary-note">Money coming in</p>
+                </article>
+                <article class="summary-card expense-card">
+                    <div class="summary-card-top"><span>Total expenses</span><span class="summary-icon expense-icon"><i
+                                class="fa-solid fa-arrow-up" aria-hidden="true"></i></span></div>
+                    <p class="summary-amount" id="expense-total">$0.00</p>
+                    <p class="summary-note">Money going out</p>
+                </article>
+            </section>
+
+            <section class="entry-panel" aria-labelledby="entry-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">QUICK ENTRY</p>
+                        <h2 id="entry-title">Add a transaction</h2>
+                    </div>
+                    <span class="entry-badge"><i class="fa-solid fa-plus" aria-hidden="true"></i> NEW</span>
+                </div>
+                <form id="transaction-form">
+                    <div class="form-field description-field">
+                        <label for="description">Description</label>
+                        <div class="input-wrap"><i class="fa-regular fa-pen-to-square" aria-hidden="true"></i><input
+                                id="description" name="description" type="text" placeholder="e.g. Weekly groceries"
+                                maxlength="80" required></div>
+                    </div>
+                    <div class="form-field amount-field">
+                        <label for="amount">Amount</label>
+                        <div class="input-wrap"><span class="input-currency" id="input-currency">$</span><input
+                                id="amount" name="amount" type="number" min="0.01" step="0.01" placeholder="0.00"
+                                required></div>
+                    </div>
+                    <div class="form-field date-field">
+                        <label for="transaction-date">Date</label>
+                        <div class="input-wrap"><i class="fa-regular fa-calendar" aria-hidden="true"></i><input
+                                id="transaction-date" name="transactionDate" type="date" required></div>
+                    </div>
+                    <div class="form-field type-field">
+                        <label for="transaction-type">Type</label>
+                        <div class="input-wrap select-wrap"><i class="fa-solid fa-arrow-right-arrow-left"
+                                aria-hidden="true"></i><select id="transaction-type" name="transactionType">
+                                <option value="expense">Expense</option>
+                                <option value="income">Income</option>
+                            </select></div>
+                    </div>
+                    <button class="add-button" type="submit"><i class="fa-solid fa-plus"
+                            aria-hidden="true"></i><span>Add transaction</span></button>
+                </form>
+            </section>
+
+            <section class="transactions-section" aria-labelledby="transactions-title">
+                <div class="transactions-heading">
+                    <div>
+                        <p class="eyebrow">YOUR ACTIVITY</p>
+                        <h2 id="transactions-title">Transactions <span class="transaction-count"
+                                id="transaction-count">0</span></h2>
+                    </div>
+                    <span class="list-caption">Most recent first</span>
+                </div>
+                <div class="transaction-list" id="transaction-list" aria-live="polite"></div>
+            </section>
+        </main>
+
+        <footer><span>© 2026 Expense Tracker</span><span class="footer-note">Made for mindful money habits</span>
+        </footer>
+    </div>
+</body>
+
+</html>
