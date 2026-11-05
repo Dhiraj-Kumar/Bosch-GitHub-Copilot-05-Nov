@@ -10,15 +10,31 @@ const typeInput = document.querySelector("#transaction-type");
 const currencyInput = document.querySelector("#input-currency");
 const themeButton = document.querySelector(".theme-toggle");
 const currencyButtons = document.querySelectorAll(".currency-option");
+const logoutButton = document.querySelector(".logout-button");
 
-let transactions = loadTransactions();
+let transactions = [];
 let settings = loadSettings();
+let useAPI = false;
 
 function loadTransactions() {
     try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
         return Array.isArray(saved) ? saved.filter(isValidTransaction) : [];
     } catch {
+        return [];
+    }
+}
+
+async function loadTransactionsFromAPI() {
+    const apiTransactions = await fetchAllTransactions();
+    if (apiTransactions.length > 0) {
+        transactions = apiTransactions;
+        useAPI = true;
+        saveTransactions();
+        return transactions;
+    } else {
+        transactions = [];
+        useAPI = true;
         return [];
     }
 }
@@ -113,10 +129,22 @@ function createTransactionRow(transaction) {
     deleteIcon.className = "fa-regular fa-trash-can";
     deleteIcon.setAttribute("aria-hidden", "true");
     remove.append(deleteIcon);
-    remove.addEventListener("click", () => {
-        transactions = transactions.filter((item) => item.id !== transaction.id);
-        saveTransactions();
-        render();
+    remove.addEventListener("click", async () => {
+        const transactionId = transaction._originalId || transaction.id;
+        if (useAPI) {
+            const success = await deleteTransactionFromAPI(transactionId);
+            if (success) {
+                transactions = transactions.filter((item) => item.id !== transaction.id);
+                saveTransactions();
+                render();
+            } else {
+                console.error("Failed to delete transaction from API");
+            }
+        } else {
+            transactions = transactions.filter((item) => item.id !== transaction.id);
+            saveTransactions();
+            render();
+        }
     });
 
     row.append(main, amount, remove);
@@ -167,22 +195,43 @@ function render() {
     renderTransactions();
 }
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!form.reportValidity()) return;
 
     const amount = Number(amountInput.value);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
-    transactions.push({
+    const newTransaction = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         description: descriptionInput.value.trim(),
         amount,
         date: dateInput.value,
         type: typeInput.value
-    });
-    saveTransactions();
-    render();
+    };
+
+    console.log(`[APP] Form submitted. useAPI = ${useAPI}`);
+    console.log(`[APP] New transaction:`, newTransaction);
+
+    if (useAPI) {
+        console.log(`[APP] Sending to API...`);
+        const result = await addTransactionToAPI(newTransaction);
+        if (result) {
+            console.log(`[APP] API returned:`, result);
+            transactions.push(result);
+            saveTransactions();
+            render();
+        } else {
+            console.error("Failed to add transaction to API - result is null");
+            alert("Failed to add transaction to API");
+        }
+    } else {
+        console.log(`[APP] Using localStorage...`);
+        transactions.push(newTransaction);
+        saveTransactions();
+        render();
+    }
+
     form.reset();
     dateInput.value = getLocalDate();
     descriptionInput.focus();
@@ -201,11 +250,272 @@ currencyButtons.forEach((button) => button.addEventListener("click", () => {
     render();
 }));
 
+logoutButton.addEventListener("click", () => {
+    sessionStorage.removeItem("expense-tracker-auth");
+    window.location.replace("login.html");
+});
+
 function getLocalDate() {
     const now = new Date();
     const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
     return local.toISOString().slice(0, 10);
 }
+
+let expenseIncomeChart = null;
+let monthlyExpenseChart = null;
+
+function getMonthlyExpenses() {
+    const monthlyData = {};
+
+    transactions.forEach((transaction) => {
+        if (transaction.type === "expense") {
+            const [year, month] = transaction.date.split("-");
+            const monthKey = `${year}-${month}`;
+            monthlyData[monthKey] = (monthlyData[monthKey] || 0) + transaction.amount;
+        }
+    });
+
+    return monthlyData;
+}
+
+function initExpenseIncomeChart() {
+    const income = transactions.filter((item) => item.type === "income").reduce((sum, item) => sum + item.amount, 0);
+    const expense = transactions.filter((item) => item.type === "expense").reduce((sum, item) => sum + item.amount, 0);
+
+    const ctx = document.getElementById("expenseIncomeChart").getContext("2d");
+
+    if (expenseIncomeChart) {
+        expenseIncomeChart.destroy();
+    }
+
+    const chartColors = settings.theme === "dark" ? {
+        income: "#43ad7d",
+        expense: "#e1847c"
+    } : {
+        income: "#187b5a",
+        expense: "#bd5b55"
+    };
+
+    expenseIncomeChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: ["Income", "Expenses"],
+            datasets: [{
+                data: [income, expense],
+                backgroundColor: [chartColors.income, chartColors.expense],
+                borderColor: settings.theme === "dark" ? "#202c28" : "#ffffff",
+                borderWidth: 2,
+                hoverOffset: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: settings.theme === "dark" ? "#314039" : "rgba(0,0,0,0.8)",
+                    padding: 10,
+                    titleFont: { size: 12, weight: "bold" },
+                    bodyFont: { size: 11 },
+                    callbacks: {
+                        label: function (context) {
+                            return formatCurrency(context.parsed);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    updateLegend(income, expense);
+}
+
+function updateLegend(income, expense) {
+    const legendContainer = document.getElementById("expenseIncomeChartLegend");
+    const total = income + expense;
+
+    const chartColors = settings.theme === "dark" ? {
+        income: "#43ad7d",
+        expense: "#e1847c"
+    } : {
+        income: "#187b5a",
+        expense: "#bd5b55"
+    };
+
+    legendContainer.innerHTML = `
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: ${chartColors.income}"></div>
+            <div class="legend-label">
+                <span class="legend-name">Income</span>
+                <span class="legend-amount">${formatCurrency(income)} (${total > 0 ? Math.round((income / total) * 100) : 0}%)</span>
+            </div>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: ${chartColors.expense}"></div>
+            <div class="legend-label">
+                <span class="legend-name">Expenses</span>
+                <span class="legend-amount">${formatCurrency(expense)} (${total > 0 ? Math.round((expense / total) * 100) : 0}%)</span>
+            </div>
+        </div>
+    `;
+}
+
+function initMonthlyExpenseChart() {
+    const monthlyData = getMonthlyExpenses();
+    const sortedMonths = Object.keys(monthlyData).sort();
+
+    if (sortedMonths.length === 0) {
+        const ctx = document.getElementById("monthlyExpenseChart").getContext("2d");
+        if (monthlyExpenseChart) {
+            monthlyExpenseChart.destroy();
+        }
+        monthlyExpenseChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: []
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+        return;
+    }
+
+    const labels = sortedMonths.map((month) => {
+        const [year, monthNum] = month.split("-");
+        const date = new Date(year, monthNum - 1);
+        return new Intl.DateTimeFormat(undefined, { month: "short", year: "2-digit" }).format(date);
+    });
+
+    const data = sortedMonths.map((month) => monthlyData[month]);
+
+    const ctx = document.getElementById("monthlyExpenseChart").getContext("2d");
+
+    if (monthlyExpenseChart) {
+        monthlyExpenseChart.destroy();
+    }
+
+    const chartColor = settings.theme === "dark" ? "#43ad7d" : "#187b5a";
+    const gridColor = settings.theme === "dark" ? "#314039" : "#e8eeeb";
+    const textColor = settings.theme === "dark" ? "#e8efeb" : "#172521";
+
+    monthlyExpenseChart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Monthly Expenses",
+                data: data,
+                borderColor: chartColor,
+                backgroundColor: settings.theme === "dark" ? "rgba(67, 173, 125, 0.1)" : "rgba(24, 123, 90, 0.1)",
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.4,
+                pointRadius: 5,
+                pointBackgroundColor: chartColor,
+                pointBorderColor: settings.theme === "dark" ? "#202c28" : "#ffffff",
+                pointBorderWidth: 2,
+                pointHoverRadius: 7,
+                pointHoverBackgroundColor: chartColor
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: textColor,
+                        font: { size: 12, weight: "600" },
+                        padding: 15,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    backgroundColor: settings.theme === "dark" ? "#314039" : "rgba(0,0,0,0.8)",
+                    padding: 10,
+                    titleFont: { size: 12, weight: "bold" },
+                    bodyFont: { size: 11 },
+                    callbacks: {
+                        label: function (context) {
+                            return "Expenses: " + formatCurrency(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: gridColor,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: textColor,
+                        font: { size: 11 },
+                        callback: function (value) {
+                            return formatCurrency(value);
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false,
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: textColor,
+                        font: { size: 11 }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderCharts() {
+    initExpenseIncomeChart();
+    initMonthlyExpenseChart();
+}
+
+// Tab Navigation
+const tabButtons = document.querySelectorAll(".tab-button");
+const tabPanels = document.querySelectorAll("[role='tabpanel']");
+
+tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        const tabName = button.dataset.tab;
+
+        tabButtons.forEach((btn) => {
+            btn.classList.remove("is-active");
+            btn.setAttribute("aria-selected", "false");
+        });
+
+        tabPanels.forEach((panel) => {
+            panel.hidden = true;
+        });
+
+        button.classList.add("is-active");
+        button.setAttribute("aria-selected", "true");
+
+        const activePanel = document.getElementById(tabName + "-tab");
+        if (activePanel) {
+            activePanel.hidden = false;
+            if (tabName === "charts") {
+                setTimeout(() => renderCharts(), 100);
+            }
+        }
+    });
+});
 
 document.querySelector("#today-date").textContent = new Intl.DateTimeFormat(undefined, {
     weekday: "short", month: "short", day: "numeric"
@@ -213,4 +523,22 @@ document.querySelector("#today-date").textContent = new Intl.DateTimeFormat(unde
 dateInput.value = getLocalDate();
 dateInput.max = getLocalDate();
 applySettings();
-render();
+
+// Initialize: Try to load from API, fallback to localStorage
+(async () => {
+    console.log(`[APP] Initializing application...`);
+    const apiAvailable = await isAPIAvailable();
+    console.log(`[APP] API Available: ${apiAvailable}`);
+    
+    if (apiAvailable) {
+        console.log(`[APP] Loading transactions from API...`);
+        await loadTransactionsFromAPI();
+        console.log(`[APP] useAPI flag set to: ${useAPI}`);
+    } else {
+        console.log("API not available, using localStorage");
+        transactions = loadTransactions();
+        useAPI = false;
+    }
+    console.log(`[APP] Loaded ${transactions.length} transactions`);
+    render();
+})();

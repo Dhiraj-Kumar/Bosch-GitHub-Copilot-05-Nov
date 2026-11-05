@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connectivity Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background: #f9f9f9;
+        }
+        .test-section h2 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #007bff;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .output {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .warning {
+            color: orange;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .inline-flex {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 API Connectivity Test</h1>
+        
+        <div class="test-section">
+            <h2>1. Check API Availability</h2>
+            <button onclick="testAPIAvailability()">Test Connection</button>
+            <div id="availabilityOutput" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>2. Fetch All Transactions</h2>
+            <button onclick="testFetchTransactions()">Fetch Transactions</button>
+            <div id="fetchOutput" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>3. Create New Transaction</h2>
+            <input type="text" id="description" placeholder="Description (e.g., Coffee)" value="Test Coffee">
+            <input type="number" id="amount" placeholder="Amount (e.g., 5.50)" value="5.50">
+            <input type="date" id="dateoftransaction" value="2026-11-05">
+            <select id="transactiontype">
+                <option value="income">Income</option>
+                <option value="expense" selected>Expense</option>
+            </select>
+            <button onclick="testAddTransaction()">Create Transaction</button>
+            <div id="addOutput" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>4. Delete Transaction</h2>
+            <input type="text" id="deleteId" placeholder="Transaction ID">
+            <button onclick="testDeleteTransaction()">Delete Transaction</button>
+            <div id="deleteOutput" class="output" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>5. Console Logs</h2>
+            <button onclick="clearLogs()">Clear Console</button>
+            <button onclick="copyLogs()">Copy All Logs</button>
+            <div id="consoleLogs" class="output" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://localhost:8000/transactions";
+        let logs = [];
+
+        // Override console methods
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog("LOG", args.join(" "));
+        };
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog("ERROR", args.join(" "));
+        };
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog("WARN", args.join(" "));
+        };
+
+        function addLog(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push(`[${timestamp}] ${type}: ${message}`);
+            updateConsoleLogs();
+        }
+
+        function updateConsoleLogs() {
+            const consoleLogsDiv = document.getElementById("consoleLogs");
+            consoleLogsDiv.textContent = logs.join("\n");
+            consoleLogsDiv.style.display = "block";
+            consoleLogsDiv.scrollTop = consoleLogsDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById("consoleLogs").style.display = "none";
+        }
+
+        function copyLogs() {
+            const text = logs.join("\n");
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Logs copied to clipboard!");
+            });
+        }
+
+        async function testAPIAvailability() {
+            const output = document.getElementById("availabilityOutput");
+            output.innerHTML = "Testing API connection...";
+            output.style.display = "block";
+
+            try {
+                console.log(`Checking API availability: ${API_BASE_URL}`);
+                const response = await fetch(API_BASE_URL, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                console.log(`API Response Status: ${response.status}`);
+                
+                if (response.ok) {
+                    output.innerHTML = `<span class="success">✓ API is AVAILABLE (Status: ${response.status})</span>`;
+                } else {
+                    output.innerHTML = `<span class="error">✗ API returned error (Status: ${response.status})</span>`;
+                }
+            } catch (error) {
+                console.error(`API Connection Error: ${error.message}`);
+                output.innerHTML = `<span class="error">✗ API Connection Failed:\n${error.message}</span>`;
+            }
+        }
+
+        async function testFetchTransactions() {
+            const output = document.getElementById("fetchOutput");
+            output.innerHTML = "Fetching transactions...";
+            output.style.display = "block";
+
+            try {
+                console.log(`GET ${API_BASE_URL}`);
+                const response = await fetch(API_BASE_URL, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                console.log(`Response Status: ${response.status}`);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(`Received ${data.length || 0} transactions`);
+                
+                output.innerHTML = `<span class="success">✓ Fetched ${(data || []).length} transactions</span>\n\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                console.error(`Fetch Error: ${error.message}`);
+                output.innerHTML = `<span class="error">✗ Failed to fetch:\n${error.message}</span>`;
+            }
+        }
+
+        async function testAddTransaction() {
+            const output = document.getElementById("addOutput");
+            output.innerHTML = "Creating transaction...";
+            output.style.display = "block";
+
+            const description = document.getElementById("description").value;
+            const amount = Number(document.getElementById("amount").value);
+            const dateoftransaction = document.getElementById("dateoftransaction").value;
+            const transactiontype = document.getElementById("transactiontype").value;
+
+            const payload = {
+                description,
+                amount,
+                dateoftransaction,
+                transactiontype
+            };
+
+            try {
+                console.log(`POST ${API_BASE_URL}`, payload);
+                const response = await fetch(API_BASE_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                console.log(`Response Status: ${response.status}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log(`Transaction Created:`, data);
+                
+                output.innerHTML = `<span class="success">✓ Transaction created successfully</span>\n\n${JSON.stringify(data, null, 2)}`;
+                
+                // Store ID for delete test
+                if (data.id) {
+                    document.getElementById("deleteId").value = data.id;
+                }
+            } catch (error) {
+                console.error(`Add Transaction Error: ${error.message}`);
+                output.innerHTML = `<span class="error">✗ Failed to create transaction:\n${error.message}</span>`;
+            }
+        }
+
+        async function testDeleteTransaction() {
+            const output = document.getElementById("deleteOutput");
+            const transactionId = document.getElementById("deleteId").value;
+
+            if (!transactionId) {
+                output.innerHTML = `<span class="warning">⚠ Please enter a Transaction ID</span>`;
+                output.style.display = "block";
+                return;
+            }
+
+            output.innerHTML = "Deleting transaction...";
+            output.style.display = "block";
+
+            try {
+                console.log(`DELETE ${API_BASE_URL}/${transactionId}`);
+                const response = await fetch(`${API_BASE_URL}/${transactionId}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                console.log(`Response Status: ${response.status}`);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                console.log(`Transaction Deleted: ${transactionId}`);
+                output.innerHTML = `<span class="success">✓ Transaction deleted successfully</span>`;
+            } catch (error) {
+                console.error(`Delete Transaction Error: ${error.message}`);
+                output.innerHTML = `<span class="error">✗ Failed to delete transaction:\n${error.message}</span>`;
+            }
+        }
+
+        // Auto-test on load
+        window.addEventListener("load", () => {
+            console.log("API Test Page Loaded");
+            console.log(`API Base URL: ${API_BASE_URL}`);
+            testAPIAvailability();
+        });
+    </script>
+</body>
+</html>

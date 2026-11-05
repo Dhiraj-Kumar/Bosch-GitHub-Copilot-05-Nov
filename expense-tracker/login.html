@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#6189dd">
+    <title>Login | Expense Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="login.css">
+    <script src="login.js" defer></script>
+</head>
+
+<body class="login-page">
+    <main class="login-layout">
+        <section class="login-panel" aria-labelledby="login-title">
+            <a class="login-brand" href="login.html" aria-label="Expense Tracker login">
+                <span class="brand-mark"><i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i></span>
+                <span>expense<span class="brand-light">tracker</span></span>
+            </a>
+
+            <div class="login-heading">
+                <p class="eyebrow">YOUR MONEY, IN FOCUS</p>
+                <h1 id="login-title">Welcome back</h1>
+                <p>Sign in to pick up where you left off.</p>
+            </div>
+
+            <form id="login-form" novalidate>
+                <div class="form-field">
+                    <label for="username">Username</label>
+                    <div class="input-wrap">
+                        <i class="fa-regular fa-user" aria-hidden="true"></i>
+                        <input id="username" name="username" type="text" placeholder="Type your username"
+                            autocomplete="username" required>
+                    </div>
+                </div>
+                <div class="form-field">
+                    <label for="password">Password</label>
+                    <div class="input-wrap">
+                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                        <input id="password" name="password" type="password" placeholder="Type your password"
+                            autocomplete="current-password" required>
+                        <button class="password-toggle" type="button" aria-label="Show password"
+                            title="Show password"><i class="fa-regular fa-eye" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <span></span>
+                    <button class="text-button" id="forgot-password" type="button">Forgot password?</button>
+                </div>
+                <button class="login-button" type="submit">
+                    <span>Login</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                </button>
+                <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+            </form>
+
+            <div class="social-section">
+                <p class="social-label">Or sign in using</p>
+                <div class="social-buttons" aria-label="Demo sign-in options">
+                    <button class="social-button facebook" type="button" data-social="Facebook" aria-label="Facebook">
+                        <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+                    </button>
+                    <button class="social-button twitter" type="button" data-social="Twitter" aria-label="Twitter">
+                        <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+                    </button>
+                    <button class="social-button google" type="button" data-social="Google" aria-label="Google">
+                        <i class="fa-brands fa-google" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="signup-section">
+                <p>New to Expense Tracker?</p>
+                <span>Use the demo account to get started</span>
+            </div>
+        </section>
+        <p class="page-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Your finances stay on this
+            device</p>
+    </main>
+</body>
+
+</html>
